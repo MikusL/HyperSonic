@@ -264,6 +264,7 @@ namespace Game
                 distanceToTarget = Math.Abs(target.Coords.X - currentCoordinates.X) + Math.Abs(target.Coords.Y - currentCoordinates.Y);
                 //Checks if there are no walls or items blocking target
                 bool freeLineToTarget = FreeLineToTarget(grid, currentCoordinates, target, itemList);
+                //Creates potential variables
                 pathToSafety = PotentialSituation(grid, new Target(target.Value, currentCoordinates), bombList, itemList, bombedTargets, currentExplosionRadius).Item1;
                 allTilesExplodeAtTheSameTime = PotentialSituation(grid, new Target(target.Value, currentCoordinates), bombList, itemList, bombedTargets, currentExplosionRadius).Item2;
                 Coordinates lastToExplode = PotentialSituation(grid, new Target(target.Value, currentCoordinates), bombList, itemList, bombedTargets, currentExplosionRadius).Item3;
@@ -271,24 +272,27 @@ namespace Game
                 //PvP is top priority
                 if (nextToPlayer)
                 {
-                    //if there is no path to safety, bomb current coordinates
-                    //otherwise bomb and run
+                    //checks potential path to safety if it is not empty, bombs
                     if (pathToSafety.Count == 0)
                     {
+                        //creates actual path to safety
                         pathToSafety = MoveToSafety(currentCoordinates, grid, bombList);
-
+                        //if there is no path to safety
                         if (pathToSafety.Count <= 1)
                         {
+                            //if current tile is not dangerous, stand still
                             if (grid[currentCoordinates.Y][currentCoordinates.X] == '.')
                             {
                                 Console.WriteLine($"MOVE {currentCoordinates.X} {currentCoordinates.Y} STAND-STILL");
                             }
+                            //else run
                             else
                             {
                                 lastToExplode = LastTileToExplode(currentCoordinates, grid, bombList);
                                 Console.WriteLine($"MOVE {lastToExplode.X} {lastToExplode.Y} DANGER-LEVELS");
                             }
                         }
+                        //if there is a path to safety, run
                         else
                         {
                             Console.WriteLine($"MOVE {pathToSafety[1].X} {pathToSafety[1].Y} RUN");
@@ -304,13 +308,10 @@ namespace Game
                 //bomb the boxes next to you
                 else if (boxesNextToPlayer.Count != 0 && bombCount > 0 && safeToPlaceBomb && target.Value * 2 < path.Count)
                 {
-                    //adds all boxes in boxesNextToPlayer into bombedTargets
-                    bombedTargets.AddRange(boxesNextToPlayer);
-
                     //if potential path to safety is empty after bombing current location
                     if (pathToSafety.Count <= 1)
                     {
-                        //if there will be no escape
+                        //if all tiles dont explode at the same time
                         if (!allTilesExplodeAtTheSameTime)
                         {
                             Console.WriteLine($"BOMB {lastToExplode.X} {lastToExplode.Y} DANGER-LEVELS 1");
@@ -318,7 +319,7 @@ namespace Game
                         //if you have arrived at your target
                         else if (path.Count <= 1)
                         {
-                            Console.WriteLine($"MOVE {currentCoordinates.X} {currentCoordinates.Y} WAITING-FOR-A-BOMB 1");
+                            Console.WriteLine($"MOVE {currentCoordinates.X} {currentCoordinates.Y} WAITING 1");
                         }
                         //else keep moving to target
                         else
@@ -326,9 +327,12 @@ namespace Game
                             Console.WriteLine($"MOVE {path[1].X} {path[1].Y} KEEP-GOING 1");
                         }
                     }
-                    //potential path to safety is not empty, bomb it and run
+                    //potential path to safety is not empty, bomb and run
                     else
                     {
+                        //adds all boxes in boxesNextToPlayer into bombedTargets
+                        bombedTargets.AddRange(boxesNextToPlayer);
+
                         Console.WriteLine($"BOMB {pathToSafety[1].X} {pathToSafety[1].Y} BOMBING-BOXES-NEXT-TO-ME 1");
                     }
 
@@ -1272,6 +1276,10 @@ namespace Game
             //Updates itemList, removing items in path of bombs
             //Updates bombedTargets, removing targets being blown up
             //Updates bombs, if they reach a different bomb, calculates chain explo effects
+
+            //Organizes bombs by timers, in ascending order
+            bombList = bombList.OrderBy(b => b.TurnsUntilExplode).ToList();
+
             foreach (var bomb in bombList)
             {
                 //right side of bomb
